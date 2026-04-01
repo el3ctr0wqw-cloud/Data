@@ -8,9 +8,11 @@ Quick-reference guide for all data files, schemas, scripts, and their relationsh
 
 | Path | Size | Type | Description |
 |------|------|------|-------------|
-| `archive_atp/atp_tennis.csv` | 8.6 MB | CSV | ATP match records, 2000–2026 (67,288 rows) |
-| `archive_wta/wta.csv` | 5.7 MB | CSV | WTA match records, 2007–2026 (44,104 rows) |
-| `match_charting/` | ~1.1 GB | Submodule | Shot-by-shot match charting — see Section 5 |
+| `archive_atp/atp_tennis.csv` | 8.6 MB | CSV | ATP match records with odds, 2000–2026 (67,288 rows) |
+| `archive_wta/wta.csv` | 5.7 MB | CSV | WTA match records with odds, 2007–2026 (44,104 rows) |
+| `tennis_atp/` | ~395 MB | Submodule | JeffSackmann ATP data — matches, rankings, players (1968–2024) |
+| `tennis_wta/` | ~232 MB | Submodule | JeffSackmann WTA data — matches, rankings, players (1968–2024) |
+| `match_charting/` | ~1.1 GB | Submodule | Shot-by-shot match charting (pre-2009–2025) |
 | `tennis_odds_analysis.py` | 9.2 KB | Script | Odds coverage, favorite win rates, ROI analysis |
 | `stability_analysis.py` | 4.9 KB | Script | Temporal drift in match game totals |
 | `under_analysis.py` | 7.9 KB | Script | Segmented under/over rates across all dimensions |
@@ -19,75 +21,148 @@ Quick-reference guide for all data files, schemas, scripts, and their relationsh
 | `archive (1) wta.zip` | 1.1 MB | Archive | Backup of wta.csv |
 | `README.md` | 6 B | Doc | Minimal placeholder |
 
+To update submodules: `git submodule update --remote`
+
 ---
 
-## 2. ATP Dataset — `archive_atp/atp_tennis.csv`
+## 2. Odds/Results Dataset — `archive_atp/` and `archive_wta/`
+
+The primary datasets used by the analysis scripts. **Unique feature: bookmaker odds.**
+
+### `archive_atp/atp_tennis.csv`
 
 **67,288 rows · 17 columns · 2000-01-03 to 2026-03-15**
 
 | Column | Type | Description | Notes |
 |--------|------|-------------|-------|
-| Tournament | string | Tournament name | e.g. "Australian Hardcourt Championships" |
+| Tournament | string | Tournament name | — |
 | Date | date | Match date | YYYY-MM-DD |
 | Series | string | Tournament tier | International, Masters 1000, ATP500, ATP250, Masters, International Gold |
 | Court | string | Court condition | Outdoor (55,267) / Indoor (12,021) |
 | Surface | string | Playing surface | Hard, Clay, Grass, Carpet |
-| Round | string | Match stage | 1st Round, 2nd Round, 3rd Round, 4th Round, Quarterfinals, Semifinals, The Final, Round Robin |
+| Round | string | Match stage | 1st Round through The Final, Round Robin |
 | Best of | integer | Sets format | 3 (nearly all); 5 (rare) |
 | Player_1 | string | Player name + initial | e.g. "Medvedev D." |
 | Player_2 | string | Player name + initial | — |
-| Winner | string | Match winner | Matches Player_1 or Player_2 |
+| Winner | string | Match winner | — |
 | Rank_1 | integer | ATP ranking of Player_1 | 0 or -1 = unranked/unavailable |
 | Rank_2 | integer | ATP ranking of Player_2 | — |
-| Pts_1 | integer | ATP ranking points for Player_1 | -1 = unavailable |
-| Pts_2 | integer | ATP ranking points for Player_2 | — |
+| Pts_1 | integer | Ranking points for Player_1 | -1 = unavailable |
+| Pts_2 | integer | Ranking points for Player_2 | — |
 | Odd_1 | float | Decimal odds for Player_1 | -1.0 = unavailable |
 | Odd_2 | float | Decimal odds for Player_2 | — |
 | Score | string | Final match score | e.g. "6-3 7-6"; tiebreaks shown as [7] |
 
----
-
-## 3. WTA Dataset — `archive_wta/wta.csv`
+### `archive_wta/wta.csv`
 
 **44,104 rows · 16 columns · 2007-01-01 to 2026-03-15**
 
 Same schema as ATP with two differences:
+- **No `Series` column** — scripts assign `Series = 'WTA'` synthetically
+- **Date format:** `YYYY-MM-DD HH:MM:SS` — time is always `00:00:00`
 
-- **No `Series` column** — WTA has no tier field in the raw data; scripts assign `Series = 'WTA'` synthetically
-- **Date format:** `YYYY-MM-DD HH:MM:SS` — time component is always `00:00:00`
-
-All other columns (Tournament, Court, Surface, Round, Best of, Player_1, Player_2, Winner, Rank_1, Rank_2, Pts_1, Pts_2, Odd_1, Odd_2, Score) are identical in name and meaning to ATP.
-
----
-
-## 4. ATP vs WTA Comparison
+### ATP vs WTA (archive datasets)
 
 | Aspect | ATP | WTA |
 |--------|-----|-----|
 | Total rows | 67,288 | 44,104 |
 | Date range | 2000–2026 | 2007–2026 |
-| Column count | 17 | 16 |
-| Unique column | `Series` (tier) | — |
-| Date format | `YYYY-MM-DD` | `YYYY-MM-DD HH:MM:SS` |
-| Surfaces | Hard, Clay, Grass, Carpet | Hard, Clay, Grass |
-| Best-of-3 matches | 54,581 | 44,100 |
 | Mean games/match (BO3) | 23.3 | 21.7 |
-| Odds coverage | Sparse pre-2004 | Good from 2007 onward |
-| Rankings available from | ~2000 (sparse early) | 2007 |
+| Odds coverage | Sparse pre-2004 | Good from 2007 |
+| Surfaces | Hard, Clay, Grass, Carpet | Hard, Clay, Grass |
+
+---
+
+## 3. JeffSackmann ATP Data — `tennis_atp/`
+
+**Source:** [JeffSackmann/tennis_atp](https://github.com/JeffSackmann/tennis_atp)  
+**Total size:** ~395 MB · 168 CSV files · Coverage: 1968–2024  
+**Key advantage over archive_atp:** Richer match stats (aces, DFs, serve %, break points), player IDs, match duration, full tournament metadata. No bookmaker odds.
+
+### 3.1 Main Tour Matches
+
+**57 files:** `atp_matches_1968.csv` through `atp_matches_2024.csv`  
+**~25–30 MB total** · Match stats available from 1991 onward
+
+**Schema (51 columns):**
+
+| Group | Columns |
+|-------|---------|
+| Tournament | `tourney_id`, `tourney_name`, `surface`, `draw_size`, `tourney_level`, `tourney_date`, `match_num` |
+| Winner | `winner_id`, `winner_seed`, `winner_entry`, `winner_name`, `winner_hand`, `winner_ht`, `winner_ioc`, `winner_age` |
+| Loser | `loser_id`, `loser_seed`, `loser_entry`, `loser_name`, `loser_hand`, `loser_ht`, `loser_ioc`, `loser_age` |
+| Result | `score`, `best_of`, `round`, `minutes` |
+| Winner stats | `w_ace`, `w_df`, `w_svpt`, `w_1stIn`, `w_1stWon`, `w_2ndWon`, `w_SvGms`, `w_bpSaved`, `w_bpFaced` |
+| Loser stats | `l_ace`, `l_df`, `l_svpt`, `l_1stIn`, `l_1stWon`, `l_2ndWon`, `l_SvGms`, `l_bpSaved`, `l_bpFaced` |
+| Rankings | `winner_rank`, `winner_rank_points`, `loser_rank`, `loser_rank_points` |
+
+`tourney_level` values: `G` (Grand Slam), `M` (Masters), `A` (ATP 500/250), `D` (Davis Cup), `F` (Tour Finals)
+
+### 3.2 Other Match File Categories
+
+| Category | Files | Size | Coverage | Notes |
+|----------|-------|------|----------|-------|
+| Doubles | `atp_matches_doubles_2000–2020.csv` | ~5–6 MB | 2000–2020 | Updates suspended 2020; 60-col schema (team-based) |
+| Futures | `atp_matches_futures_1991–2024.csv` | ~60+ MB | 1991–2024 | Same 51-col schema; stats from 2011 |
+| Qual/Challenger | `atp_matches_qual_chall_1978–2024.csv` | ~50+ MB | 1978–2024 | Same schema; chall stats 2008+, qual stats 2011+ |
+| Amateur | `atp_matches_amateur.csv` | 3.9 MB | Historical | Pre-Open Era amateur matches |
+
+### 3.3 Rankings
+
+**7 files:** `atp_rankings_70s.csv` through `atp_rankings_20s.csv` + `atp_rankings_current.csv`  
+**~74.8 MB total** · Coverage: 1970s–present (1982 missing; 1973–1984 intermittent)
+
+**Schema (4 columns):** `ranking_date, rank, player (player_id), points`
+
+### 3.4 Players
+
+**`atp_players.csv`** · 2.5 MB  
+**Schema (8 columns):** `player_id, name_first, name_last, hand, dob, ioc, height, wikidata_id`
+
+---
+
+## 4. JeffSackmann WTA Data — `tennis_wta/`
+
+**Source:** [JeffSackmann/tennis_wta](https://github.com/JeffSackmann/tennis_wta)  
+**Total size:** ~232 MB · 121 CSV files · Coverage: 1968–2024  
+**Key advantage over archive_wta:** Same richer match stats as ATP; full historical depth back to 1968. No bookmaker odds.
+
+### 4.1 Main Tour Matches
+
+**57 files:** `wta_matches_1968.csv` through `wta_matches_2024.csv`  
+**~25–30 MB total**
+
+**Schema:** Identical 51-column structure to ATP main tour matches (Section 3.1).  
+`tourney_level` values: `G` (Grand Slam), `P` (Premier/WTA 1000), `PM` (Premier Mandatory), `I` (International), `IT` (ITF)
+
+### 4.2 Qualifying & ITF Matches
+
+**57 files:** `wta_matches_qual_itf_1968.csv` through `wta_matches_qual_itf_2024.csv`  
+**~140–150 MB total** (bulk of the repo — recent years are large: 2024 file is ~7 MB)  
+**Schema:** Same 51 columns as main tour.
+
+### 4.3 Rankings
+
+**6 files:** `wta_rankings_80s.csv` through `wta_rankings_20s.csv` + `wta_rankings_current.csv`  
+**~50.5 MB total** · Coverage: 1980s–present
+
+**Schema (5 columns):** `ranking_date, rank, player (player_id), points, tours`  
+Note: WTA rankings include `tours` (tournaments played) — not present in ATP rankings.
+
+### 4.4 Players
+
+**`wta_players.csv`** · 2.36 MB  
+**Schema (8 columns):** `player_id, name_first, name_last, hand, dob, ioc, height, wikidata_id`  
+Identical structure to `atp_players.csv`.
 
 ---
 
 ## 5. Match Charting Project — `match_charting/`
 
 **Source:** [JeffSackmann/tennis_MatchChartingProject](https://github.com/JeffSackmann/tennis_MatchChartingProject)  
-**Added as:** git submodule  
 **Total size:** ~1.1 GB  
 **Coverage:** Pre-2009 through December 2025 · Men's + Women's tours  
 **Granularity:** Shot-by-shot point charting — serve type, direction, rally sequence, shot type, outcome
-
-To update: `git submodule update --remote match_charting`
-
----
 
 ### 5.1 Match Metadata
 
@@ -96,31 +171,9 @@ To update: `git submodule update --remote match_charting`
 | `charting-m-matches.csv` | 1.1 MB | 7,194 | Men's charted matches |
 | `charting-w-matches.csv` | 572 KB | 3,824 | Women's charted matches |
 
-**Schema (15 columns):**
-
-| Column | Type | Description |
-|--------|------|-------------|
-| match_id | string | Unique match identifier — joins to all other charting files |
-| Player 1 | string | Player 1 name |
-| Player 2 | string | Player 2 name |
-| Pl 1 hand | string | Player 1 handedness (R/L) |
-| Pl 2 hand | string | Player 2 handedness (R/L) |
-| Date | date | Match date (YYYYMMDD) |
-| Tournament | string | Tournament name |
-| Round | string | Match round |
-| Time | string | Match duration |
-| Court | string | Court name/number |
-| Surface | string | Playing surface (Hard, Clay, Grass) |
-| Umpire | string | Chair umpire name |
-| Best of | integer | Match format (3 or 5) |
-| Final TB? | string | Whether final set was a tiebreak |
-| Charted by | string | Volunteer charter name |
-
----
+**Schema (15 columns):** `match_id, Player 1, Player 2, Pl 1 hand, Pl 2 hand, Date (YYYYMMDD), Tournament, Round, Time, Court, Surface, Umpire, Best of, Final TB?, Charted by`
 
 ### 5.2 Point-by-Point Data
-
-Split into era-based files to keep sizes manageable. All share the same schema.
 
 | File | Size | Era |
 |------|------|-----|
@@ -131,143 +184,107 @@ Split into era-based files to keep sizes manageable. All share the same schema.
 | `charting-w-points-2010s.csv` | 18 MB | Women's, 2010–2019 |
 | `charting-w-points-2020s.csv` | 30.4 MB | Women's, 2020–present |
 
-**Schema (14 columns):**
+**Schema (14 columns):** `match_id, Pt, Set1, Set2, Gm1, Gm2, Pts, Gm#, TbSet, Svr, 1st, 2nd, Notes, PtWinner`
 
-| Column | Type | Description |
-|--------|------|-------------|
-| match_id | string | Join key to matches file |
-| Pt | integer | Point number within match |
-| Set1 / Set2 | integer | Games won in set by each player |
-| Gm1 / Gm2 | integer | Points in current game by each player |
-| Pts | string | Score notation (e.g. "0-15") |
-| Gm# | integer | Game number within match |
-| TbSet | integer | Tiebreak set flag |
-| Svr | integer | Server (1 = Player 1, 2 = Player 2) |
-| 1st | string | First serve coding — direction, outcome, rally sequence |
-| 2nd | string | Second serve coding (same format; empty if first serve in) |
-| Notes | string | Manual annotations by charter |
-| PtWinner | integer | Point winner (1 or 2) |
+Serve fields (`1st`/`2nd`) encode direction, outcome, and full rally shot sequence in compact notation. See `match_charting/data_dictionary.txt` for the key.
 
-**Serve/rally coding format:** Each serve field encodes serve direction, outcome, and the full rally shot sequence using a compact notation (e.g. `6*` = T-serve ace, `4` = body serve, followed by rally codes per shot). See `match_charting/data_dictionary.txt` for the full key.
+### 5.3 Pre-aggregated Statistics Files (26 files)
+
+13 men's + 13 women's files covering: Overview, Rally, Serve Basics, Serve Direction, Serve Influence, Key Points Serve, Key Points Return, Return Depth, Return Outcomes, Shot Direction, Shot Dir Outcomes, Shot Types, Net Points, Serve & Volley, Sv Break Total, Sv Break Split. All join on `match_id`.
 
 ---
 
-### 5.3 Pre-aggregated Statistics Files
+## 6. Dataset Comparison
 
-26 files (13 men's, 13 women's) — match-level aggregates derived from the point data. All join on `match_id`.
-
-| Category | Men's file | Women's file | Size (M/W) | Description |
-|----------|-----------|-------------|-----------|-------------|
-| Overview | `charting-m-stats-Overview.csv` | `charting-w-stats-Overview.csv` | 6.3 MB / 2.9 MB | Serve pts, aces, DFs, 1st/2nd serve in/won, return pts, winners, unforced errors |
-| Rally | `charting-m-stats-Rally.csv` | `charting-w-stats-Rally.csv` | 10.4 MB / 5.6 MB | Points won, winners, forced/unforced errors by rally length |
-| Serve Basics | `charting-m-stats-ServeBasics.csv` | `charting-w-stats-ServeBasics.csv` | 4.3 MB / 2.2 MB | Serve placement counts: wide, body, T |
-| Serve Direction | `charting-m-stats-ServeDirection.csv` | `charting-w-stats-ServeDirection.csv` | 4.4 MB / 2.3 MB | Serve direction to deuce and ad courts |
-| Serve Influence | `charting-m-stats-ServeInfluence.csv` | `charting-w-stats-ServeInfluence.csv` | 3.9 MB / 2.1 MB | Serve placement impact on rally outcome |
-| Key Points Serve | `charting-m-stats-KeyPointsServe.csv` | `charting-w-stats-KeyPointsServe.csv` | 5.5 MB / 2.9 MB | Serve performance on break points, game points, deuce |
-| Key Points Return | `charting-m-stats-KeyPointsReturn.csv` | `charting-w-stats-KeyPointsReturn.csv` | 5.1 MB / 2.7 MB | Return performance on key points |
-| Return Depth | `charting-m-stats-ReturnDepth.csv` | `charting-w-stats-ReturnDepth.csv` | 24.4 MB / 12.9 MB | Return landing zone depth analysis |
-| Return Outcomes | `charting-m-stats-ReturnOutcomes.csv` | `charting-w-stats-ReturnOutcomes.csv` | 28.4 MB / 15.2 MB | Return success rates and outcomes |
-| Shot Direction | `charting-m-stats-ShotDirection.csv` | `charting-w-stats-ShotDirection.csv` | 5.0 MB / 2.6 MB | Shot direction patterns (FH/BH, court zones) |
-| Shot Dir Outcomes | `charting-m-stats-ShotDirOutcomes.csv` | `charting-w-stats-ShotDirOutcomes.csv` | 15.4 MB / 7.7 MB | Shot direction × outcome metrics |
-| Shot Types | `charting-m-stats-ShotTypes.csv` | `charting-w-stats-ShotTypes.csv` | 31.7 MB / 15.7 MB | Shot type distribution and effectiveness |
-| Net Points | `charting-m-stats-NetPoints.csv` | `charting-w-stats-NetPoints.csv` | 5.9 MB / 3.0 MB | Net approaches, winners, pass attempts, induced errors |
-| Serve & Volley | `charting-m-stats-SnV.csv` | `charting-w-stats-SnV.csv` | 5.0 MB / 579 KB | Serve-and-volley frequency and success rate |
-| Sv Break Total | `charting-m-stats-SvBreakTotal.csv` | `charting-w-stats-SvBreakTotal.csv` | 14.6 MB / 7.7 MB | Service break statistics (aggregated) |
-| Sv Break Split | `charting-m-stats-SvBreakSplit.csv` | `charting-w-stats-SvBreakSplit.csv` | 15.8 MB / 8.3 MB | Service break statistics by match situation |
-
-**Overview stats schema (key columns):** `match_id, player, set, serve_pts, aces, dfs, first_in, first_won, second_in, second_won, bk_pts, bp_saved, return_pts, return_pts_won, winners, winners_fh, winners_bh, unforced, unforced_fh, unforced_bh`
-
----
-
-### 5.4 Joining Charting Data to ATP/WTA Match Records
-
-The charting `match_id` format is `YYYYMMDD-T-Lastname_First-Lastname_First` (e.g. `20230129-M-Djokovic_Novak-Tsitsipas_Stefanos`). There is no direct foreign key to `atp_tennis.csv` / `wta.csv` — join on `Date` + normalized player surnames. A fuzzy match is required to handle name format differences.
-
----
-
-## 6. Summary Statistics
-
-| Metric | ATP | WTA | Charting (M) | Charting (W) |
-|--------|-----|-----|-------------|-------------|
-| Total matches | 67,288 | 44,104 | 7,194 | 3,824 |
-| Best-of-3 matches | 54,581 | 44,100 | ~6,500 | ~3,800 |
-| Date range | 2000–2026 | 2007–2026 | pre-2009–2025 | pre-2009–2025 |
-| Granularity | Match result | Match result | Shot-by-shot | Shot-by-shot |
-| U22.5 base rate (all years) | 55.4% | 62.7% | — | — |
-| U22.5 base rate (2019+) | 52.8% | 61.2% | — | — |
-
-Missing value sentinel in ATP/WTA CSVs: `-1` for integers, `-1.0` for floats.
+| Aspect | archive_atp/wta | tennis_atp/wta | match_charting |
+|--------|----------------|----------------|----------------|
+| Purpose | Odds + results | Rich match stats | Shot-by-shot |
+| Date range | 2000/2007–2026 | 1968–2024 | pre-2009–2025 |
+| Matches (M) | 67,288 | ~200k+ (all levels) | 7,194 charted |
+| Matches (W) | 44,104 | ~120k+ (all levels) | 3,824 charted |
+| Has bookmaker odds | Yes | No | No |
+| Has serve stats | No | Yes (1991+/tour) | Yes (shot-level) |
+| Has player IDs | No | Yes | No |
+| Has match duration | No | Yes | No |
+| Has rankings | Inline | Separate files | No |
+| Tour levels | Main tour only | All levels | Main tour mostly |
+| Join key to others | Date + name | `winner_id`/`loser_id` → players file | Date + name (fuzzy) |
 
 ---
 
 ## 7. Scripts
 
 ### `tennis_odds_analysis.py`
-**Inputs:** `atp_tennis.csv`, `wta.csv`
-
-- Validates odds data coverage (filters rows where `Odd_1 == -1.0`)
-- Calculates favorite win rates and implied probability calibration
-- Computes ROI for flat-bet strategies on favorites and underdogs
-- Measures bookmaker overround (vig/margin)
-- Stratifies upset rates by surface and round
-- Tests heavy-favorite performance (odds < 1.20)
-- Tracks year-over-year favorite win rate trends
+**Inputs:** `archive_atp/atp_tennis.csv`, `archive_wta/wta.csv`
+- Favorite win rates and implied probability calibration
+- ROI for flat-bet strategies on favorites and underdogs
+- Bookmaker overround (vig/margin), upset rates by surface and round
+- Heavy-favorite performance (odds < 1.20), year-over-year trends
 
 ### `stability_analysis.py`
-**Inputs:** `atp_tennis.csv`, `wta.csv`
-
-- Parses Score strings → total games played per match
-- Filters to best-of-3 matches only
-- Produces year-by-year under rates for lines U21.5, U22.5, U23.5
-- Computes 3-year rolling means to detect structural drift
-- Tests segment stability: WTA 200+ ranking gap, WTA 51–100 gap, ATP International×Clay, ATP Hard×200+ gap
+**Inputs:** `archive_atp/atp_tennis.csv`, `archive_wta/wta.csv`
+- Parses Score strings → total games; BO3-only filter
+- Year-by-year under rates (U21.5, U22.5, U23.5); 3-year rolling means
+- Segment stability tests: WTA 200+ gap, ATP International×Clay, ATP Hard×200+ gap
 
 ### `under_analysis.py`
-**Inputs:** `atp_tennis.csv`, `wta.csv`
-
-- Merges both tours into a single DataFrame with a `Tour` label (`ATP` / `WTA`)
-- WTA rows receive a synthetic `Series = 'WTA'` for compatibility
-- Calculates under rates for U21.5, U22.5, U23.5 broken down by:
-  - Surface (Clay, Hard, Grass, Carpet)
-  - Round (1st Round through The Final)
-  - ATP Series tier
-  - Ranking gap buckets: 0–10, 11–25, 26–50, 51–100, 101–200, 200+
-  - Combined filters: Surface × Ranking Gap, Series × Surface
-- Reports mean total games per segment for line calibration
-- Includes sample size (n) for each segment
+**Inputs:** `archive_atp/atp_tennis.csv`, `archive_wta/wta.csv`
+- Under rates by surface, round, ATP Series tier, ranking gap buckets (0–10, 11–25, 26–50, 51–100, 101–200, 200+)
+- Combined filters: Surface × Ranking Gap, Series × Surface
+- Mean total games per segment; sample size (n) per segment
 
 ---
 
-## 8. Data Quality Notes
+## 8. Summary Statistics
 
-1. **Odds missing:** `-1.0` in `Odd_1`/`Odd_2` — widespread in ATP pre-2004; filter with `Odd_1 != -1.0` before any odds analysis.
-2. **Rankings unranked:** `Rank_1`/`Rank_2` = 0 or -1 means unranked or unavailable; exclude from ranking-gap calculations.
-3. **Ranking points unavailable:** `Pts_1`/`Pts_2` = -1 — common pre-2008 for ATP; near-universal for WTA pre-2010.
-4. **Retirements/walkovers:** Rows where Score contains no parseable set scores (e.g., "W/O", "RET") are silently dropped by the score-parsing regex in `stability_analysis.py` and `under_analysis.py`.
-5. **WTA Date timestamp:** Format includes `HH:MM:SS` always set to `00:00:00`. Parse with `pd.to_datetime()` and `.dt.date` to normalize.
-6. **ATP `Series` has no WTA equivalent:** Scripts assign `Series = 'WTA'` to all WTA rows to enable combined DataFrames; this is a code convention, not raw data.
-7. **Tiebreak notation in Score:** Set scores like `7-6` may be followed by `[7]` indicating tiebreak score. The score parser uses regex to extract set totals only.
-8. **Carpet surface:** ATP 1,632 rows; WTA 161 rows. Carpet was phased out post-2009 — no recent data. Treat as a historical artifact; some analyses exclude it.
-9. **WTA Best-of-5:** 1 row in the WTA dataset has `Best of = 5`. Almost certainly a data entry error. All analyses filter `Best of == 3`.
-10. **WTA Score trailing whitespace:** Several WTA Score values end with a trailing space (e.g., `"6-1 6-1 "`). Use `.str.strip()` before any string comparisons.
-11. **ATP pre-2004 data sparsity:** Ranking points and odds are largely missing for 2000–2003. Any analysis using these fields should confirm coverage before drawing conclusions.
-12. **Charting data join:** No direct foreign key between `match_charting/` and the ATP/WTA CSVs. Joining requires date normalization (charting uses YYYYMMDD; ATP uses YYYY-MM-DD) and fuzzy player name matching.
-13. **Charting coverage bias:** Charting data is volunteer-contributed and skews toward high-profile matches (Grand Slams, Masters). Not a representative sample of all ATP/WTA matches.
+| Metric | archive ATP | archive WTA | JS ATP (main) | JS WTA (main) | Charting M | Charting W |
+|--------|------------|------------|--------------|--------------|-----------|-----------|
+| Total matches | 67,288 | 44,104 | ~200k+ | ~120k+ | 7,194 | 3,824 |
+| Date range | 2000–2026 | 2007–2026 | 1968–2024 | 1968–2024 | pre-2009–2025 | pre-2009–2025 |
+| Has odds | Yes | Yes | No | No | No | No |
+| U22.5 rate (all) | 55.4% | 62.7% | — | — | — | — |
+| U22.5 rate (2019+) | 52.8% | 61.2% | — | — | — | — |
 
 ---
 
-## 9. Research Reference — `UNDER_RESEARCH_PHASE1.md`
+## 9. Data Quality Notes
 
-Phase 1 findings are derived entirely from `atp_tennis.csv` and `wta.csv` using `stability_analysis.py` and `under_analysis.py`. No external data sources are used at this phase.
+**archive_atp / archive_wta:**
+1. **Odds missing:** `-1.0` in `Odd_1`/`Odd_2` — widespread in ATP pre-2004.
+2. **Rankings:** `Rank_*` = 0 or -1 = unranked/unavailable; `Pts_*` = -1 = unavailable.
+3. **Retirements/walkovers:** Score strings without parseable sets are silently dropped by score-parsing scripts.
+4. **WTA Date timestamp:** `HH:MM:SS` always `00:00:00`. Use `pd.to_datetime().dt.date` to normalize.
+5. **WTA Series:** No tier field — scripts inject `Series = 'WTA'` at runtime.
+6. **Score tiebreak notation:** `[7]` appended to set score; stripped by regex parser.
+7. **Carpet surface:** ATP 1,632 rows, WTA 161 rows; phased out post-2009.
+8. **WTA Best-of-5:** 1 row — data error; all analyses filter `Best of == 3`.
+9. **WTA Score trailing whitespace:** Use `.str.strip()` before string comparisons.
+10. **ATP pre-2004 sparsity:** Ranking points and odds largely missing 2000–2003.
 
-**Key findings (summary — full tables in `UNDER_RESEARCH_PHASE1.md`):**
+**tennis_atp / tennis_wta:**
+11. **ATP rankings gap:** 1982 data missing; 1973–1984 intermittent.
+12. **Match stats availability:** ATP tour 1991+, challengers 2008+, qualifying 2011+.
+13. **ATP doubles suspended:** No updates after late 2020.
+14. **WTA rankings extra column:** `tours` (tournaments played) — not in ATP rankings.
+15. **Player join:** Match files use `winner_id`/`loser_id` as integer IDs; join to `atp_players.csv` / `wta_players.csv` on `player_id`.
 
-- ATP and WTA are structurally different markets; must be analyzed separately
-- ATP mean 23.3 games vs WTA 21.7 games — WTA plays ~1.6 fewer games per match
-- **ATP drift:** Permanent structural lengthening since 2013 (+0.72 games/match); recent U22.5 rate ~52.8% — near vig break-even (~54% needed); requires confirmed line mispricing
-- **WTA drift:** Mild drift, plateaued ~2019; recent U22.5 ~61.2% — stable and primary research target
-- **Strongest signal:** WTA ranking gap 200+ → 70.1% U22.5 (n=2,521; range 61–78% across all years)
-- Surface filter: meaningful for ATP (Clay best, Grass worst); essentially flat for WTA (~2pp spread)
-- Round filter: R1/R2 best for both tours; Finals worst (~4pp penalty)
+**match_charting:**
+16. **No direct FK to ATP/WTA CSVs:** Join on `Date` (normalize YYYYMMDD ↔ YYYY-MM-DD) + fuzzy player surname matching.
+17. **Coverage bias:** Volunteer-contributed; skews toward high-profile matches (Grand Slams, Masters). Not a representative sample.
 
-**Phase 2 requirement:** Historical O/U closing lines (Pinnacle preferred) for WTA matches 2019+ to calculate actual ROI on real odds vs. base rates.
+---
+
+## 10. Research Reference — `UNDER_RESEARCH_PHASE1.md`
+
+Derived entirely from `archive_atp/atp_tennis.csv` and `archive_wta/wta.csv` via `stability_analysis.py` and `under_analysis.py`. No external data at this phase.
+
+**Key findings (full tables in `UNDER_RESEARCH_PHASE1.md`):**
+- ATP and WTA are structurally different markets
+- ATP mean 23.3 games vs WTA 21.7 — WTA plays ~1.6 fewer games per match
+- **ATP drift:** +0.72 games/match since 2013; recent U22.5 ~52.8% — near break-even
+- **WTA drift:** Plateaued ~2019; recent U22.5 ~61.2% — stable primary target
+- **Strongest signal:** WTA ranking gap 200+ → 70.1% U22.5 (n=2,521; range 61–78%)
+- Surface filter: meaningful for ATP (Clay best), flat for WTA
+- Round filter: R1/R2 best; Finals worst (~4pp penalty)
+
+**Phase 2 requirement:** Historical O/U closing lines (Pinnacle preferred) for WTA matches 2019+.
