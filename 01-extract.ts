@@ -111,7 +111,8 @@ async function extractDetails(events: any[]): Promise<void> {
 
 // Extract closing prices from any period's history.totals object.
 // Works for both num_1 (first-set lines 8.5/9.5/10.5) and num_0 (match lines 16.5–24.5).
-function extractClosingLines(period: any): LineSnapshot[] {
+// Captures both opening (first entry) and closing (last entry) prices from history.
+function extractLines(period: any): LineSnapshot[] {
   const histTotals = period.history?.totals;
   if (!histTotals || typeof histTotals !== 'object') return [];
 
@@ -122,10 +123,18 @@ function extractClosingLines(period: any): LineSnapshot[] {
     const overHistory: number[][] = t.over ?? [];
     const underHistory: number[][] = t.under ?? [];
     if (overHistory.length === 0 || underHistory.length === 0) continue;
-    const overPrice = overHistory[overHistory.length - 1][1];
-    const underPrice = underHistory[underHistory.length - 1][1];
-    if (!overPrice || !underPrice || overPrice <= 1 || underPrice <= 1) continue;
-    snapshots.push({ line: Number(lineStr), closing_over: overPrice, closing_under: underPrice });
+    const closingOver = overHistory[overHistory.length - 1][1];
+    const closingUnder = underHistory[underHistory.length - 1][1];
+    if (!closingOver || !closingUnder || closingOver <= 1 || closingUnder <= 1) continue;
+    const openingOver = overHistory[0][1];
+    const openingUnder = underHistory[0][1];
+    snapshots.push({
+      line: Number(lineStr),
+      closing_over: closingOver,
+      closing_under: closingUnder,
+      opening_over: openingOver,
+      opening_under: openingUnder,
+    });
   }
   // Sort by line value ascending
   return snapshots.sort((a, b) => a.line - b.line);
@@ -168,7 +177,7 @@ async function mergeDataset(events: any[]): Promise<FirstSetRecord[]> {
       continue;
     }
 
-    const lines = extractClosingLines(set1Period);
+    const lines = extractLines(set1Period);
     if (lines.length === 0) { skips.noLines++; continue; }
 
     // Match total (num_0 period result, number=0)
@@ -179,12 +188,13 @@ async function mergeDataset(events: any[]): Promise<FirstSetRecord[]> {
 
     // Match-level lines from num_0 (16.5–24.5 range) — same call, no extra API cost
     const matchPeriod = detailEvent?.periods?.num_0;
-    const match_lines = extractClosingLines(matchPeriod);
+    const match_lines = extractLines(matchPeriod);
 
     records.push({
       event_id: event.event_id,
       date: (event.starts ?? '').slice(0, 10),
       league: event.league_name ?? event.league?.name ?? '',
+      region: event.league_container ?? '',
       home: event.home?.name ?? event.home ?? '',
       away: event.away?.name ?? event.away ?? '',
       set1_home: homeGames,
