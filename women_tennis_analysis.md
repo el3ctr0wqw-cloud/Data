@@ -149,7 +149,7 @@ When Set 1 ends in a tiebreak (score 7-6, set1_total = 13), the match total
 distribution shifts dramatically upward.
 
 | Condition | n | Avg Match Total |
-|-----------|---|-----------------|
+|-----------|---|------------------|
 | Set 1 tiebreak (set1=13) | 185 | 25.46 games |
 | No tiebreak | 1,816 | 20.53 games |
 | Tiebreak effect | — | +4.94 games |
@@ -169,7 +169,7 @@ may be available at only 1.10–1.25 live). Whether the live edge is exploitable
 depends entirely on what live odds are available at the time of the tiebreak.
 This cannot be verified from the current dataset (no live odds data).
 
-The structural case for a live edge exists (92.6% win rate for Over 20.5 is
+The structural case for a live edge exists (91.4% win rate for Over 20.5 is
 extraordinary), but confirm the live odds before committing to this strategy.
 At live odds of 1.10, break-even is 90.9% — very close to 91.4%. Minimal margin.
 At live odds of 1.20+, the edge is meaningful.
@@ -180,11 +180,11 @@ At live odds of 1.20+, the edge is meaningful.
 
 ### The Only Confirmed Pre-Match Edge
 
-**Market:** WTA 125 Match Total — Under
-**Minimum odds:** 1.50 (do not bet if priced below this)
-**Line selection:** Take the LOWEST available line from this list per match:
-  20.5 → 21.5 → 22.5 → 23.5 → 24.5 → 25.5 → 26.5
-**One bet per match only** (never stack multiple lines on same match)
+**Market:** WTA 125 Match Total — Under  
+**Minimum odds:** 1.50 (do not bet if priced below this)  
+**Line selection:** Take the LOWEST available line from this list per match:  
+  20.5 → 21.5 → 22.5 → 23.5 → 24.5 → 25.5 → 26.5  
+**One bet per match only** (never stack multiple lines on same match)  
 **Applies to:** WTA 125 tier only
 
 ### Stake Sizing
@@ -204,15 +204,15 @@ At live odds of 1.20+, the edge is meaningful.
 
 ### Live Tiebreak Bet (Conditional)
 
-After a WTA set1 tiebreak: bet Match Over at the lowest available line.
-**Only proceed if live Over odds are >= 1.20 for line 20.5–21.5.**
-At live odds below 1.20, the edge is too thin to be reliable.
+After a WTA set1 tiebreak: bet Match Over at the lowest available line.  
+**Only proceed if live Over odds are >= 1.20 for line 20.5–21.5.**  
+At live odds below 1.20, the edge is too thin to be reliable.  
 This strategy requires live odds access — verify before trading.
 
 ### Monitoring
 
-Re-run the ROI calculation monthly on new data.
-Flag if WTA 125 ROI drops below +3% over 100 consecutive bets.
+Re-run the ROI calculation monthly on new data.  
+Flag if WTA 125 ROI drops below +3% over 100 consecutive bets.  
 The second-half temporal decline (+4.53%) suggests possible market correction —
 watch for Pinnacle adjusting WTA 125 match total lines upward.
 
@@ -226,7 +226,5 @@ All figures derived from dataset.combined.json with the following exact paramete
 - One bet per match (lowest eligible line wins the selection)
 - ROI = (sum_of_winning_payouts - n_bets) / n_bets * 100
 - 286 bets, 175 wins, total payouts = sum of odds for each winning bet
-  Verification: 175 × avg_winning_odds = total payout
-  avg_winning_odds (for WTA 125 winners) ≈ 1.921 × (286/175) adjusted...
   Direct check: payout = 286 × (1 + 0.1168) = 286 × 1.1168 = 319.41
   319.41 - 286 = 33.41 net profit on 286 units staked = +11.68% confirmed.
